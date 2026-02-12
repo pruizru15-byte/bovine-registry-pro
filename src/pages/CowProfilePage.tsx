@@ -1,6 +1,5 @@
 import { useParams, Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
-import { mockCows, mockOwners } from "@/lib/mock-data";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,10 +15,38 @@ import {
   QrCode,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { cowsApi, ownersApi } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const CowProfilePage = () => {
   const { id } = useParams();
-  const cow = mockCows.find((c) => c.id === id);
+
+  const { data: cow, isLoading: loadingCow } = useQuery({
+    queryKey: ["cow", id],
+    queryFn: () => cowsApi.getById(id!),
+    enabled: !!id,
+  });
+
+  const { data: owner } = useQuery({
+    queryKey: ["owner", cow?.ownerId],
+    queryFn: () => ownersApi.getById(cow!.ownerId),
+    enabled: !!cow?.ownerId,
+  });
+
+  if (loadingCow) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-4xl mx-auto space-y-6">
+          <Skeleton className="h-8 w-48" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Skeleton className="h-96" />
+            <Skeleton className="h-96 lg:col-span-2" />
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (!cow) {
     return (
@@ -34,8 +61,6 @@ const CowProfilePage = () => {
       </DashboardLayout>
     );
   }
-
-  const owner = mockOwners.find((o) => o.id === cow.ownerId);
 
   const handleExport = (type: string) => {
     toast.success(`Documento generado`, {
@@ -59,7 +84,11 @@ const CowProfilePage = () => {
           <div className="space-y-4">
             <Card className="overflow-hidden">
               <div className="aspect-square bg-muted flex items-center justify-center">
-                <Beef className="h-20 w-20 text-muted-foreground/30" />
+                {cow.photo ? (
+                  <img src={cow.photo} alt={cow.name} className="h-full w-full object-cover" />
+                ) : (
+                  <Beef className="h-20 w-20 text-muted-foreground/30" />
+                )}
               </div>
               <div className="p-4 text-center">
                 <h2 className="text-xl font-bold">{cow.name}</h2>
@@ -200,8 +229,12 @@ const CowProfilePage = () => {
                 <div className="flex gap-4">
                   {/* Photo */}
                   <div className="shrink-0">
-                    <div className="h-24 w-20 rounded border bg-muted flex items-center justify-center">
-                      <Beef className="h-8 w-8 text-muted-foreground/40" />
+                    <div className="h-24 w-20 rounded border bg-muted flex items-center justify-center overflow-hidden">
+                      {cow.photo ? (
+                        <img src={cow.photo} alt={cow.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <Beef className="h-8 w-8 text-muted-foreground/40" />
+                      )}
                     </div>
                   </div>
 
