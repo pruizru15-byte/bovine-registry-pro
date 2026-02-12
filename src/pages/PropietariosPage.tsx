@@ -10,14 +10,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { mockOwners } from "@/lib/mock-data";
 import { Users, Search } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ownersApi } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const PropietariosPage = () => {
   const [search, setSearch] = useState("");
 
-  const filtered = mockOwners.filter(
+  const { data: owners = [], isLoading } = useQuery({
+    queryKey: ["owners"],
+    queryFn: ownersApi.getAll,
+  });
+
+  const filtered = owners.filter(
     (o) =>
       o.name.toLowerCase().includes(search.toLowerCase()) ||
       o.document.includes(search)
@@ -59,23 +66,33 @@ const PropietariosPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((owner) => (
-                <TableRow key={owner.id}>
-                  <TableCell className="font-mono text-sm text-primary">
-                    {owner.id}
-                  </TableCell>
-                  <TableCell className="font-medium">{owner.name}</TableCell>
-                  <TableCell className="font-mono text-sm">{owner.document}</TableCell>
-                  <TableCell className="text-sm">{owner.phone}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                    {owner.address}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="secondary">{owner.cattleCount}</Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={i}>
+                    {Array.from({ length: 6 }).map((_, j) => (
+                      <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                filtered.map((owner) => (
+                  <TableRow key={owner.id}>
+                    <TableCell className="font-mono text-sm text-primary">
+                      {owner.id}
+                    </TableCell>
+                    <TableCell className="font-medium">{owner.name}</TableCell>
+                    <TableCell className="font-mono text-sm">{owner.document}</TableCell>
+                    <TableCell className="text-sm">{owner.phone}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                      {owner.address}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="secondary">{owner.cattleCount}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+              {!isLoading && filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     No se encontraron propietarios

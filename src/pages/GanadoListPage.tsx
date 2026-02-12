@@ -1,4 +1,3 @@
-import { mockCows } from "@/lib/mock-data";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card } from "@/components/ui/card";
@@ -14,11 +13,19 @@ import {
 } from "@/components/ui/table";
 import { Beef, Search } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { cowsApi } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const GanadoListPage = () => {
   const [search, setSearch] = useState("");
 
-  const filtered = mockCows.filter(
+  const { data: cows = [], isLoading } = useQuery({
+    queryKey: ["cows"],
+    queryFn: cowsApi.getAll,
+  });
+
+  const filtered = cows.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.tagCode.toLowerCase().includes(search.toLowerCase()) ||
@@ -35,7 +42,7 @@ const GanadoListPage = () => {
               Ganado Registrado
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
-              {mockCows.length} registros en el sistema
+              {cows.length} registros en el sistema
             </p>
           </div>
         </div>
@@ -63,42 +70,52 @@ const GanadoListPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((cow) => (
-                <TableRow key={cow.id}>
-                  <TableCell>
-                    <Link
-                      to={`/ganado/${cow.id}`}
-                      className="font-mono text-sm text-primary hover:underline"
-                    >
-                      {cow.tagCode}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {cow.name}
-                    {cow.nickname && (
-                      <span className="text-muted-foreground text-xs ml-1">
-                        "{cow.nickname}"
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>{cow.breed}</TableCell>
-                  <TableCell>{cow.sex}</TableCell>
-                  <TableCell>{cow.owner}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={cow.status === "Activo" ? "default" : "destructive"}
-                      className={
-                        cow.status === "Activo"
-                          ? "bg-primary/10 text-primary hover:bg-primary/20 border-0"
-                          : ""
-                      }
-                    >
-                      {cow.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
+              {isLoading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <TableRow key={i}>
+                    {Array.from({ length: 6 }).map((_, j) => (
+                      <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                filtered.map((cow) => (
+                  <TableRow key={cow.id}>
+                    <TableCell>
+                      <Link
+                        to={`/ganado/${cow.id}`}
+                        className="font-mono text-sm text-primary hover:underline"
+                      >
+                        {cow.tagCode}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {cow.name}
+                      {cow.nickname && (
+                        <span className="text-muted-foreground text-xs ml-1">
+                          "{cow.nickname}"
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>{cow.breed}</TableCell>
+                    <TableCell>{cow.sex}</TableCell>
+                    <TableCell>{cow.owner}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={cow.status === "Activo" ? "default" : "destructive"}
+                        className={
+                          cow.status === "Activo"
+                            ? "bg-primary/10 text-primary hover:bg-primary/20 border-0"
+                            : ""
+                        }
+                      >
+                        {cow.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+              {!isLoading && filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     No se encontraron registros

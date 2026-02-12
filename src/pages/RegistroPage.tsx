@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Check, ChevronLeft, ChevronRight, Upload, User, Fingerprint, Users } from "lucide-react";
-import { mockOwners } from "@/lib/mock-data";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ownersApi, cowsApi, type CowCreatePayload } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const steps = [
   { id: 1, title: "Datos Personales", icon: User },
@@ -23,6 +25,28 @@ const RegistroPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const { data: owners = [], isLoading: loadingOwners } = useQuery({
+    queryKey: ["owners"],
+    queryFn: ownersApi.getAll,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: cowsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cows"] });
+      toast.success("Registro exitoso", {
+        description: `${form.name} ha sido registrado en el sistema.`,
+      });
+      navigate("/");
+    },
+    onError: (error: Error) => {
+      toast.error("Error al registrar", {
+        description: error.message,
+      });
+    },
+  });
 
   const [form, setForm] = useState({
     name: "",
@@ -88,10 +112,7 @@ const RegistroPage = () => {
 
   const handleSubmit = () => {
     if (validateStep(3)) {
-      toast.success("Registro exitoso", {
-        description: `${form.name} ha sido registrado en el sistema.`,
-      });
-      navigate("/");
+      createMutation.mutate(form as CowCreatePayload);
     }
   };
 
@@ -289,18 +310,22 @@ const RegistroPage = () => {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Propietario *</Label>
-                  <Select value={form.ownerId} onValueChange={(v) => updateField("ownerId", v)}>
-                    <SelectTrigger className={errors.ownerId ? "border-destructive" : ""}>
-                      <SelectValue placeholder="Seleccionar propietario" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mockOwners.map((o) => (
-                        <SelectItem key={o.id} value={o.id}>
-                          {o.name} — {o.document}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {loadingOwners ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <Select value={form.ownerId} onValueChange={(v) => updateField("ownerId", v)}>
+                      <SelectTrigger className={errors.ownerId ? "border-destructive" : ""}>
+                        <SelectValue placeholder="Seleccionar propietario" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {owners.map((o) => (
+                          <SelectItem key={o.id} value={o.id}>
+                            {o.name} — {o.document}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   {errors.ownerId && <p className="text-xs text-destructive">{errors.ownerId}</p>}
                 </div>
                 <div className="space-y-2">
@@ -333,9 +358,9 @@ const RegistroPage = () => {
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit}>
+              <Button onClick={handleSubmit} disabled={createMutation.isPending}>
                 <Check className="h-4 w-4 mr-1" />
-                Registrar
+                {createMutation.isPending ? "Registrando..." : "Registrar"}
               </Button>
             )}
           </div>
